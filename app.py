@@ -129,7 +129,7 @@ if uploaded_image is not None:
         col1, col2 = st.columns(2)
         with col1:
             st.header("Your Image")
-            st.image(display_image, width=300)
+            st.image(display_image, use_column_width=True)
         with col2:
             st.header(f"looks like: {predicted_actor_name}")
-            st.image(predicted_actor_path, width=600)
+            st.image(predicted_actor_path, use_column_width=True)
