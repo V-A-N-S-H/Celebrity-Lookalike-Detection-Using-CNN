@@ -122,7 +122,7 @@ if uploaded_image is not None:
 
         index_pos = recommend(feature_list, features)
         
-        predicted_actor_path = filenames[index_pos]
+        predicted_actor_path = filenames[index_pos].replace('\\', '/')
         predicted_actor_name = os.path.basename(os.path.dirname(predicted_actor_path)).replace('_', ' ')
 
         # Display side-by-side comparison
