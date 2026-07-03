@@ -4,6 +4,10 @@ warnings.filterwarnings("ignore")
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
+# Bypass SSL verification to allow downloading model weights on Streamlit Cloud
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+
 # NumPy compatibility monkey-patch for older TensorFlow and h5py versions
 import numpy as np
 if not hasattr(np, 'object'):
