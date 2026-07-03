@@ -21,36 +21,29 @@ if not hasattr(np, 'float'):
 if not hasattr(np, 'typeDict'):
     np.typeDict = np.sctypeDict
 
-# Keras compatibility monkey-patch for older keras-vggface imports
+# Redirect standalone Keras imports to TensorFlow's Keras to prevent version mismatches
 import sys
 import types
-try:
-    import keras
-    # Patch keras.engine.topology
-    try:
-        from keras.engine.topology import get_source_inputs
-    except ImportError:
-        keras_engine_topology = types.ModuleType('keras.engine.topology')
-        try:
-            from keras.utils.layer_utils import get_source_inputs
-        except ImportError:
-            from tensorflow.keras.utils import get_source_inputs
-        keras_engine_topology.get_source_inputs = get_source_inputs
-        sys.modules['keras.engine.topology'] = keras_engine_topology
+import tensorflow as tf
 
-    # Patch keras.utils.generic_utils
-    try:
-        from keras.utils.generic_utils import get_file
-    except ImportError:
-        keras_utils_generic_utils = types.ModuleType('keras.utils.generic_utils')
-        try:
-            from keras.utils import get_file
-        except ImportError:
-            from tensorflow.keras.utils import get_file
-        keras_utils_generic_utils.get_file = get_file
-        sys.modules['keras.utils.generic_utils'] = keras_utils_generic_utils
-except ImportError:
-    pass
+keras_mappings = {
+    'keras': tf.keras,
+    'keras.backend': tf.keras.backend,
+    'keras.layers': tf.keras.layers,
+    'keras.models': tf.keras.models,
+    'keras.utils': tf.keras.utils,
+}
+for old, new in keras_mappings.items():
+    sys.modules[old] = new
+
+# Patch old keras-vggface specific internal modules
+keras_engine_topology = types.ModuleType('keras.engine.topology')
+keras_engine_topology.get_source_inputs = tf.keras.utils.get_source_inputs
+sys.modules['keras.engine.topology'] = keras_engine_topology
+
+keras_utils_generic_utils = types.ModuleType('keras.utils.generic_utils')
+keras_utils_generic_utils.get_file = tf.keras.utils.get_file
+sys.modules['keras.utils.generic_utils'] = keras_utils_generic_utils
 
 import cv2
 import pickle
