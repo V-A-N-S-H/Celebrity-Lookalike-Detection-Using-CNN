@@ -17,6 +17,37 @@ if not hasattr(np, 'float'):
 if not hasattr(np, 'typeDict'):
     np.typeDict = np.sctypeDict
 
+# Keras compatibility monkey-patch for older keras-vggface imports
+import sys
+import types
+try:
+    import keras
+    # Patch keras.engine.topology
+    try:
+        from keras.engine.topology import get_source_inputs
+    except ImportError:
+        keras_engine_topology = types.ModuleType('keras.engine.topology')
+        try:
+            from keras.utils.layer_utils import get_source_inputs
+        except ImportError:
+            from tensorflow.keras.utils import get_source_inputs
+        keras_engine_topology.get_source_inputs = get_source_inputs
+        sys.modules['keras.engine.topology'] = keras_engine_topology
+
+    # Patch keras.utils.generic_utils
+    try:
+        from keras.utils.generic_utils import get_file
+    except ImportError:
+        keras_utils_generic_utils = types.ModuleType('keras.utils.generic_utils')
+        try:
+            from keras.utils import get_file
+        except ImportError:
+            from tensorflow.keras.utils import get_file
+        keras_utils_generic_utils.get_file = get_file
+        sys.modules['keras.utils.generic_utils'] = keras_utils_generic_utils
+except ImportError:
+    pass
+
 import cv2
 import pickle
 from PIL import Image
