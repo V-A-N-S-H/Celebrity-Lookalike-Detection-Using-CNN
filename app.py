@@ -24,15 +24,8 @@ if not hasattr(np, 'typeDict'):
 # Import the actual Keras submodules before we redirect the sys.modules mappings
 import sys
 import types
-try:
-    import keras.utils.layer_utils as lu
-except ImportError:
-    lu = None
-
-try:
-    import keras.utils.generic_utils as gu
-except ImportError:
-    gu = None
+import keras.utils.layer_utils as lu
+import keras.utils.generic_utils as gu
 
 # Redirect standalone Keras imports to TensorFlow's Keras to prevent version mismatches
 import tensorflow as tf
