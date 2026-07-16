@@ -21,55 +21,65 @@ if not hasattr(np, 'float'):
 if not hasattr(np, 'typeDict'):
     np.typeDict = np.sctypeDict
 
-# Import the actual Keras submodules before we redirect the sys.modules mappings
+# Wrap entire imports and setup in try-except to show unredacted errors in the Streamlit UI
 import sys
 import types
-import keras.utils.layer_utils as lu
-import keras.utils.generic_utils as gu
-
-# Redirect standalone Keras imports to TensorFlow's Keras to prevent version mismatches
-import tensorflow as tf
-
-keras_mappings = {
-    'keras': tf.keras,
-    'keras.backend': tf.keras.backend,
-    'keras.layers': tf.keras.layers,
-    'keras.models': tf.keras.models,
-}
-for old, new in keras_mappings.items():
-    sys.modules[old] = new
-
-# Create custom keras.utils to support submodules like layer_utils
-keras_utils = types.ModuleType('keras.utils')
-for attr in dir(tf.keras.utils):
-    setattr(keras_utils, attr, getattr(tf.keras.utils, attr))
-
-if lu is not None:
-    keras_utils.layer_utils = lu
-    sys.modules['keras.utils.layer_utils'] = lu
-
-sys.modules['keras.utils'] = keras_utils
-
-# Patch old keras-vggface specific internal modules
-keras_engine_topology = types.ModuleType('keras.engine.topology')
-keras_engine_topology.get_source_inputs = tf.keras.utils.get_source_inputs
-sys.modules['keras.engine.topology'] = keras_engine_topology
-
-if gu is not None:
-    sys.modules['keras.utils.generic_utils'] = gu
-else:
-    keras_utils_generic_utils = types.ModuleType('keras.utils.generic_utils')
-    keras_utils_generic_utils.get_file = tf.keras.utils.get_file
-    sys.modules['keras.utils.generic_utils'] = keras_utils_generic_utils
-
-import cv2
-import pickle
-from PIL import Image
+import traceback
 import streamlit as st
-from mtcnn import MTCNN
-from keras_vggface.vggface import VGGFace
-from keras_vggface.utils import preprocess_input
-from sklearn.metrics.pairwise import cosine_similarity
+
+try:
+    # Import actual submodules before overriding sys.modules
+    import keras.utils.layer_utils as lu
+    import keras.utils.generic_utils as gu
+
+    # Redirect standalone Keras imports to TensorFlow's Keras
+    import tensorflow as tf
+
+    keras_mappings = {
+        'keras': tf.keras,
+        'keras.backend': tf.keras.backend,
+        'keras.layers': tf.keras.layers,
+        'keras.models': tf.keras.models,
+    }
+    for old, new in keras_mappings.items():
+        sys.modules[old] = new
+
+    # Create custom keras.utils
+    keras_utils = types.ModuleType('keras.utils')
+    for attr in dir(tf.keras.utils):
+        setattr(keras_utils, attr, getattr(tf.keras.utils, attr))
+
+    if lu is not None:
+        keras_utils.layer_utils = lu
+        sys.modules['keras.utils.layer_utils'] = lu
+
+    sys.modules['keras.utils'] = keras_utils
+
+    # Patch old keras-vggface specific internal modules
+    keras_engine_topology = types.ModuleType('keras.engine.topology')
+    keras_engine_topology.get_source_inputs = tf.keras.utils.get_source_inputs
+    sys.modules['keras.engine.topology'] = keras_engine_topology
+
+    if gu is not None:
+        sys.modules['keras.utils.generic_utils'] = gu
+    else:
+        keras_utils_generic_utils = types.ModuleType('keras.utils.generic_utils')
+        keras_utils_generic_utils.get_file = tf.keras.utils.get_file
+        sys.modules['keras.utils.generic_utils'] = keras_utils_generic_utils
+
+    import cv2
+    import pickle
+    from PIL import Image
+    from mtcnn import MTCNN
+    from keras_vggface.vggface import VGGFace
+    from keras_vggface.utils import preprocess_input
+    from sklearn.metrics.pairwise import cosine_similarity
+
+except Exception as e:
+    st.title("Initialization Error")
+    st.error(f"Error during startup: {type(e).__name__}: {str(e)}")
+    st.code(traceback.format_exc())
+    st.stop()
 
 model = VGGFace(model='resnet50', include_top=False, input_shape=(224, 224, 3), pooling='avg')
 detector = MTCNN()
