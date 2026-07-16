@@ -21,9 +21,20 @@ if not hasattr(np, 'float'):
 if not hasattr(np, 'typeDict'):
     np.typeDict = np.sctypeDict
 
-# Redirect standalone Keras imports to TensorFlow's Keras to prevent version mismatches
+# Import the actual Keras submodules before we redirect the sys.modules mappings
 import sys
 import types
+try:
+    import keras.utils.layer_utils as lu
+except ImportError:
+    lu = None
+
+try:
+    import keras.utils.generic_utils as gu
+except ImportError:
+    gu = None
+
+# Redirect standalone Keras imports to TensorFlow's Keras to prevent version mismatches
 import tensorflow as tf
 
 keras_mappings = {
@@ -31,19 +42,32 @@ keras_mappings = {
     'keras.backend': tf.keras.backend,
     'keras.layers': tf.keras.layers,
     'keras.models': tf.keras.models,
-    'keras.utils': tf.keras.utils,
 }
 for old, new in keras_mappings.items():
     sys.modules[old] = new
+
+# Create custom keras.utils to support submodules like layer_utils
+keras_utils = types.ModuleType('keras.utils')
+for attr in dir(tf.keras.utils):
+    setattr(keras_utils, attr, getattr(tf.keras.utils, attr))
+
+if lu is not None:
+    keras_utils.layer_utils = lu
+    sys.modules['keras.utils.layer_utils'] = lu
+
+sys.modules['keras.utils'] = keras_utils
 
 # Patch old keras-vggface specific internal modules
 keras_engine_topology = types.ModuleType('keras.engine.topology')
 keras_engine_topology.get_source_inputs = tf.keras.utils.get_source_inputs
 sys.modules['keras.engine.topology'] = keras_engine_topology
 
-keras_utils_generic_utils = types.ModuleType('keras.utils.generic_utils')
-keras_utils_generic_utils.get_file = tf.keras.utils.get_file
-sys.modules['keras.utils.generic_utils'] = keras_utils_generic_utils
+if gu is not None:
+    sys.modules['keras.utils.generic_utils'] = gu
+else:
+    keras_utils_generic_utils = types.ModuleType('keras.utils.generic_utils')
+    keras_utils_generic_utils.get_file = tf.keras.utils.get_file
+    sys.modules['keras.utils.generic_utils'] = keras_utils_generic_utils
 
 import cv2
 import pickle
