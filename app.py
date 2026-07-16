@@ -28,11 +28,24 @@ import traceback
 import streamlit as st
 
 try:
-    # Import actual submodules before overriding sys.modules
-    import keras.utils.layer_utils as lu
-    import keras.utils.generic_utils as gu
+    # 1. Fallback imports of Keras submodules before overriding sys.modules
+    try:
+        import keras.utils.layer_utils as lu
+    except ImportError:
+        try:
+            import tensorflow.python.keras.utils.layer_utils as lu
+        except ImportError:
+            lu = None
 
-    # Redirect standalone Keras imports to TensorFlow's Keras
+    try:
+        import keras.utils.generic_utils as gu
+    except ImportError:
+        try:
+            import tensorflow.python.keras.utils.generic_utils as gu
+        except ImportError:
+            gu = None
+
+    # 2. Redirect standalone Keras imports to TensorFlow's Keras
     import tensorflow as tf
 
     keras_mappings = {
@@ -44,7 +57,7 @@ try:
     for old, new in keras_mappings.items():
         sys.modules[old] = new
 
-    # Create custom keras.utils
+    # 3. Create custom keras.utils to support submodules like layer_utils
     keras_utils = types.ModuleType('keras.utils')
     for attr in dir(tf.keras.utils):
         setattr(keras_utils, attr, getattr(tf.keras.utils, attr))
@@ -55,7 +68,7 @@ try:
 
     sys.modules['keras.utils'] = keras_utils
 
-    # Patch old keras-vggface specific internal modules
+    # 4. Patch old keras-vggface specific internal modules
     keras_engine_topology = types.ModuleType('keras.engine.topology')
     keras_engine_topology.get_source_inputs = tf.keras.utils.get_source_inputs
     sys.modules['keras.engine.topology'] = keras_engine_topology
